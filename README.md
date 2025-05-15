@@ -1,6 +1,6 @@
 # Rental DVD Data Exploration – SQL Project
 
-I explored a relational DVD rental database using advanced SQL queries. II extracted meaningful insights into customer behavior, rental trends, and category performance using structured query techniques.
+I explored a relational DVD rental database using advanced SQL queries. I extracted meaningful insights into customer behavior, rental trends, and category performance using structured query techniques.
 
 ---
 
