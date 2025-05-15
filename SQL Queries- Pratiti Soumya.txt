@@ -1,0 +1,115 @@
+/* QUERY 1 - QUERY USED FOR 1ST INSIGHT*/
+
+
+WITH Family_Movies
+AS (   SELECT
+               c.name AS Category_Name,
+               f.rental_duration,
+               NTILE(4) OVER (ORDER BY f.rental_duration) AS Quartile
+       FROM
+               Film f
+           JOIN
+             Film_category fc
+                 ON f.Film_id = fc.film_id
+           JOIN
+             Category c
+                 ON fc.category_id = c.category_id
+       WHERE
+               c.name IN ('Animation', 'Children', 'Classics', 'Comedy', 'Family', 'Music'))
+SELECT
+        fm.Category_Name,
+        fm.Quartile,
+        COUNT(*)
+FROM
+        Family_Movies fm
+GROUP BY
+        1,
+        2
+ORDER BY
+        1,
+        2;
+
+
+/* QUERY 2- QUERY USED FOR 2ND INSIGHT */
+
+SELECT
+        DATE_PART('Year', rental_date)  AS Rental_Year,
+        DATE_PART('Month', rental_date) AS Rental_Month,
+        s.Store_ID                      AS Store_ID,
+        COUNT(r.*)                      AS Rental_Count
+FROM
+        rental r
+    JOIN
+      staff s
+        ON r.staff_id = s.staff_id
+GROUP BY
+        1,
+        2,
+        3
+ORDER BY
+        4 DESC;
+
+/*QUERY 3 - QUERY USED FOR 3RD INSIGHT*/
+
+SELECT 
+       DATE_TRUNC('Month', p.payment_date) AS Payment_Month,
+       CONCAT(c.first_name, ' ', c.last_name) AS Customer_Name,
+       COUNT(p.*) AS Pay_Count_Per_Month,
+       SUM(p.amount) AS Total_Payment
+FROM Payment p
+JOIN Customer c ON p.customer_id=c.customer_id
+WHERE c.customer_id IN
+        (SELECT Customer_id
+         FROM
+             (SELECT customer_id,
+                     SUM(Amount)
+              FROM Payment
+              GROUP BY 1
+              ORDER BY 2 DESC
+              LIMIT 10))
+GROUP BY 1,
+         2
+ORDER BY 2;
+
+/*QUERY 4 - QUERY USED FOR 4TH INSIGHT*/  
+
+WITH T1 AS
+    (SELECT Customer_Name,
+            Payment_Year,
+            Payment_Month,
+            Total_Payment,
+            Lag(Total_Payment) OVER(PARTITION BY Customer_Name
+                                    ORDER BY Payment_Month) AS Last_Month_Payment,
+            Total_Payment- Lag(Total_Payment) OVER(PARTITION BY Customer_Name
+                                                   ORDER BY Payment_Month) AS Payment_Difference
+     FROM
+         (SELECT DATE_PART('Year', p.payment_date) AS Payment_Year,
+                 DATE_PART('Month', p.payment_date) AS Payment_Month,
+                 CONCAT(c.first_name, ' ', c.last_name) AS Customer_Name,
+                 SUM(p.amount) AS Total_Payment
+          FROM Payment p
+          JOIN Customer c ON p.customer_id=c.customer_id
+          WHERE C.customer_id IN
+                  (SELECT Customer_id
+                   FROM
+                       (SELECT customer_id,
+                               SUM(Amount)
+                        FROM Payment
+                        GROUP BY 1
+                        ORDER BY 2 DESC
+                        LIMIT 10))
+              AND DATE_PART('Year', p.payment_date) =2007
+          GROUP BY 1,
+                   2,
+                   3
+          ORDER BY 3))
+SELECT T1.*,
+       CASE
+           WHEN MAX(T1.Payment_Difference) OVER() = T1.Payment_Difference THEN 'This is the maximum difference'
+           ELSE 'Not Maximum'
+       END AS Is_Max_difference
+FROM T1
+ORDER BY T1.Payment_Month,
+         T1.Payment_Difference DESC;
+
+
